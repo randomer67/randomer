@@ -73,12 +73,32 @@ export default function Home() {
   const createPeerConnection = (peerId) => {
     // 使用多个公共 STUN 服务器，提高网络穿透成功率
     const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' }
-      ]
-    });
+  iceServers: [
+    {
+      urls: "stun:stun.relay.metered.ca:80",
+    },
+    {
+      urls: "turn:global.relay.metered.ca:80",
+      username: "e2ff818dc262cb7d3527f05d",
+      credential: "KncpdA0bUtPQfpML",
+    },
+    {
+      urls: "turn:global.relay.metered.ca:80?transport=tcp",
+      username: "e2ff818dc262cb7d3527f05d",
+      credential: "KncpdA0bUtPQfpML",
+    },
+    {
+      urls: "turn:global.relay.metered.ca:443",
+      username: "e2ff818dc262cb7d3527f05d",
+      credential: "KncpdA0bUtPQfpML",
+    },
+    {
+      urls: "turns:global.relay.metered.ca:443?transport=tcp",
+      username: "e2ff818dc262cb7d3527f05d",
+      credential: "KncpdA0bUtPQfpML",
+    },
+  ],
+});
     peerConnectionRef.current = pc;
 
     // 把本地音视频流加进去
