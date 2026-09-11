@@ -43,21 +43,33 @@ export default function Home() {
     });
 
     // 监听信令（Offer, Answer, ICE）
-        socketRef.current.on('signal', async (data) => {
+            socketRef.current.on('signal', async (data) => {
       if (!peerConnectionRef.current) return;
 
       try {
         if (data.type === 'offer') {
-          // 确保 remoteDescription 没有被设置过
-          if (peerConnectionRef.current.signalingState !== 'stable') {
-            await peerConnectionRef.current.setLocalDescription({ type: 'rollback' });
-          }
-          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
+          // 确保传入的是标准的 SDP 对象格式
+          const remoteDesc = new RTCSessionDescription({
+            type: 'offer',
+            sdp: typeof data.sdp === 'string' ? data.sdp : data.sdp.sdp
+          });
+          await peerConnectionRef.current.setRemoteDescription(remoteDesc);
+          
           const answer = await peerConnectionRef.current.createAnswer();
           await peerConnectionRef.current.setLocalDescription(answer);
-          socketRef.current.emit('signal', { targetId: data.senderId, type: 'answer', sdp: answer.sdp });
+          
+          // 发送 answer 时，只发送 sdp 字符串
+          socketRef.current.emit('signal', { 
+            targetId: data.senderId, 
+            type: 'answer', 
+            sdp: answer.sdp 
+          });
         } else if (data.type === 'answer') {
-          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
+          const remoteDesc = new RTCSessionDescription({
+            type: 'answer',
+            sdp: typeof data.sdp === 'string' ? data.sdp : data.sdp.sdp
+          });
+          await peerConnectionRef.current.setRemoteDescription(remoteDesc);
         } else if (data.type === 'ice-candidate' && data.candidate) {
           await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
         }
