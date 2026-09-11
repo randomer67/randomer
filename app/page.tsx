@@ -28,7 +28,7 @@ export default function Home() {
       setIsConnected(true);
       setMessages([]);
       
-      // 确保本地摄像头已经打开，再建立连接
+      // 确保本地摄像头已经打开
       if (!localStreamRef.current) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -43,12 +43,12 @@ export default function Home() {
     });
 
     // 监听信令（Offer, Answer, ICE）
-            socketRef.current.on('signal', async (data) => {
+    socketRef.current.on('signal', async (data) => {
       if (!peerConnectionRef.current) return;
 
       try {
         if (data.type === 'offer') {
-          // 确保传入的是标准的 SDP 对象格式
+          // 核心修复：确保传入的是标准的 SDP 对象格式
           const remoteDesc = new RTCSessionDescription({
             type: 'offer',
             sdp: typeof data.sdp === 'string' ? data.sdp : data.sdp.sdp
@@ -58,11 +58,10 @@ export default function Home() {
           const answer = await peerConnectionRef.current.createAnswer();
           await peerConnectionRef.current.setLocalDescription(answer);
           
-          // 发送 answer 时，只发送 sdp 字符串
           socketRef.current.emit('signal', { 
             targetId: data.senderId, 
             type: 'answer', 
-            sdp: answer.sdp 
+            sdp: answer.sdp // 只发送 sdp 字符串
           });
         } else if (data.type === 'answer') {
           const remoteDesc = new RTCSessionDescription({
@@ -87,34 +86,16 @@ export default function Home() {
 
   // 2. 创建 WebRTC 连接
   const createPeerConnection = (peerId) => {
-    // 使用多个公共 STUN 服务器，提高网络穿透成功率
+    // 使用 Metered TURN 服务器
     const pc = new RTCPeerConnection({
-  iceServers: [
-    {
-      urls: "stun:stun.relay.metered.ca:80",
-    },
-    {
-      urls: "turn:global.relay.metered.ca:80",
-      username: "e2ff818dc262cb7d3527f05d",
-      credential: "KncpdA0bUtPQfpML",
-    },
-    {
-      urls: "turn:global.relay.metered.ca:80?transport=tcp",
-      username: "e2ff818dc262cb7d3527f05d",
-      credential: "KncpdA0bUtPQfpML",
-    },
-    {
-      urls: "turn:global.relay.metered.ca:443",
-      username: "e2ff818dc262cb7d3527f05d",
-      credential: "KncpdA0bUtPQfpML",
-    },
-    {
-      urls: "turns:global.relay.metered.ca:443?transport=tcp",
-      username: "e2ff818dc262cb7d3527f05d",
-      credential: "KncpdA0bUtPQfpML",
-    },
-  ],
-});
+      iceServers: [
+        { urls: "stun:stun.relay.metered.ca:80" },
+        { urls: "turn:global.relay.metered.ca:80", username: "e2ff818dc262cb7d3527f05d", credential: "KncpdA0bUtPQfpML" },
+        { urls: "turn:global.relay.metered.ca:80?transport=tcp", username: "e2ff818dc262cb7d3527f05d", credential: "KncpdA0bUtPQfpML" },
+        { urls: "turn:global.relay.metered.ca:443", username: "e2ff818dc262cb7d3527f05d", credential: "KncpdA0bUtPQfpML" },
+        { urls: "turns:global.relay.metered.ca:443?transport=tcp", username: "e2ff818dc262cb7d3527f05d", credential: "KncpdA0bUtPQfpML" },
+      ]
+    });
     peerConnectionRef.current = pc;
 
     // 把本地音视频流加进去
@@ -140,7 +121,6 @@ export default function Home() {
     if (isMatching || isConnected) return;
     setIsMatching(true);
 
-    // 提前打开摄像头
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localStreamRef.current = stream;
