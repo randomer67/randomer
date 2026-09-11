@@ -61,7 +61,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 const LOCAL_IP = getLocalIP();
 server.listen(PORT, '0.0.0.0', () => {
   console.log('Signaling server is running on port ' + PORT);
