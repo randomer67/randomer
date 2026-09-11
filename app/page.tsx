@@ -43,22 +43,26 @@ export default function Home() {
     });
 
     // 监听信令（Offer, Answer, ICE）
-    socketRef.current.on('signal', async (data) => {
+        socketRef.current.on('signal', async (data) => {
       if (!peerConnectionRef.current) return;
 
-      if (data.type === 'offer') {
-        await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
-        const answer = await peerConnectionRef.current.createAnswer();
-        await peerConnectionRef.current.setLocalDescription(answer);
-        socketRef.current.emit('signal', { targetId: data.senderId, type: 'answer', sdp: answer.sdp });
-      } else if (data.type === 'answer') {
-        await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
-      } else if (data.type === 'ice-candidate' && data.candidate) {
-        try {
+      try {
+        if (data.type === 'offer') {
+          // 确保 remoteDescription 没有被设置过
+          if (peerConnectionRef.current.signalingState !== 'stable') {
+            await peerConnectionRef.current.setLocalDescription({ type: 'rollback' });
+          }
+          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
+          const answer = await peerConnectionRef.current.createAnswer();
+          await peerConnectionRef.current.setLocalDescription(answer);
+          socketRef.current.emit('signal', { targetId: data.senderId, type: 'answer', sdp: answer.sdp });
+        } else if (data.type === 'answer') {
+          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
+        } else if (data.type === 'ice-candidate' && data.candidate) {
           await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
-        } catch (e) {
-          console.error('Error adding ICE candidate', e);
         }
+      } catch (err) {
+        console.error('Signal handling error:', err);
       }
     });
 
