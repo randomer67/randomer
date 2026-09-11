@@ -88,7 +88,7 @@ export default function Home() {
   const t = translations[selectedLanguage as keyof typeof translations] || translations.zh;
 
   useEffect(() => {
-    socketRef.current = io(`http://${window.location.hostname}:3001`);
+    socketRef.current = io('https://randomer-backend.onrender.com');
     socketRef.current.on('connect', () => console.log('Connected'));
     socketRef.current.on('onlineCount', (count: number) => setOnlineCount(count));
     socketRef.current.on('matchFound', async (data: any) => {
