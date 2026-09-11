@@ -15,14 +15,11 @@ const io = new Server(server, {
 let waitingQueue = [];
 let onlineUsers = 0;
 
-// 获取本机局域网 IP 的函数
 const getLocalIP = () => {
   const interfaces = os.networkInterfaces();
   for (let name of Object.keys(interfaces)) {
     for (let iface of interfaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address;
-      }
+      if (iface.family === 'IPv4' && !iface.internal) return iface.address;
     }
   }
   return 'localhost';
@@ -37,6 +34,7 @@ io.on('connection', (socket) => {
     console.log('User ' + socket.id + ' is looking for a match...');
     if (waitingQueue.length > 0) {
       const peer = waitingQueue.shift();
+      // 匹配成功，互相通知
       socket.emit('matchFound', { peerId: peer.id });
       io.to(peer.id).emit('matchFound', { peerId: socket.id });
     } else {
@@ -45,8 +43,9 @@ io.on('connection', (socket) => {
     }
   });
 
+  // 【关键修复】：转发信令时，必须带上发送者的 ID (senderId)
   socket.on('signal', (data) => {
-    io.to(data.targetId).emit('signal', data);
+    io.to(data.targetId).emit('signal', { ...data, senderId: socket.id });
   });
 
   socket.on('chatMessage', (msg) => {
